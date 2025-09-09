@@ -26,11 +26,13 @@
     50% { transform: rotate(5deg) translateY(-5px);}
     100% { transform: rotate(0deg) translateY(0px);}
   }
+  .line-divider { border-bottom: 1px solid #d1d5db; margin: 8px 0; }
 </style>
 </head>
 <body class="bg-pink-50 min-h-screen relative">
 <div id="root" class="w-full max-w-3xl mx-auto relative z-10"></div>
 
+<!-- Ícones decorativos -->
 <img src="https://cdn-icons-png.flaticon.com/512/5956/5956881.png" class="decor-icon animated" style="top:5%; left:5%"/>
 <img src="https://i.pinimg.com/736x/5b/1a/1f/5b1a1fe80409c15862ab918fc49e0854.jpg" class="decor-icon animated" style="top:15%; left:80%"/>
 <img src="https://cdn-icons-png.flaticon.com/512/5956/5956881.png" class="decor-icon animated" style="top:50%; left:10%"/>
@@ -105,28 +107,18 @@ function App() {
 
       let dataURL = null;
       if (item.imagem) {
-        dataURL = await new Promise(resolve => {
-          const img = new Image();
-          img.crossOrigin = "Anonymous";
-          img.src = item.imagem;
-          img.onload = () => {
-            const canvas = document.createElement("canvas");
-            canvas.width = img.width;
-            canvas.height = img.height;
-            const ctx = canvas.getContext("2d");
-            ctx.drawImage(img, 0, 0);
-            resolve(canvas.toDataURL("image/png"));
-          };
-          img.onerror = async () => {
-            try {
-              const response = await fetch(item.imagem);
-              const blob = await response.blob();
-              const reader = new FileReader();
-              reader.onloadend = () => resolve(reader.result);
-              reader.readAsDataURL(blob);
-            } catch (e) { resolve(null); }
-          };
-        });
+        try {
+          const response = await fetch(item.imagem);
+          const blob = await response.blob();
+          const reader = new FileReader();
+          dataURL = await new Promise(resolve => {
+            reader.onloadend = () => resolve(reader.result);
+            reader.readAsDataURL(blob);
+          });
+        } catch(e) {
+          console.warn("Não foi possível carregar a imagem:", item.imagem);
+          dataURL = null;
+        }
       }
 
       if (dataURL) pdf.addImage(dataURL, "PNG", 10, y, imgWidth, imgHeight);
@@ -140,6 +132,24 @@ function App() {
 
       y += imgHeight + 15;
       itemCount++;
+    }
+
+    pdf.addPage();
+    y = 20;
+    pdf.setFontSize(14);
+    pdf.text("URLs dos Itens Adicionados Manualmente", 10, y);
+    y += 10;
+    pdf.setFontSize(10);
+
+    for (const item of sacola.filter(i => i.outro)) {
+      const line = `{ nome: "${item.nome}", imagem: "${item.imagem || ""}"} `;
+      const linhasUrl = pdf.splitTextToSize(line, 180);
+      pdf.text(linhasUrl, 10, y);
+      y += 6 * linhasUrl.length;
+      if (y > 280) {
+        pdf.addPage();
+        y = 20;
+      }
     }
 
     return pdf;
@@ -175,13 +185,7 @@ function App() {
 
       <div className="mb-4 flex flex-col gap-1">
         {buscaAtiva && sugeridos.map((p,i)=>(
-          <div key={i} className="cursor-pointer flex items-center gap-2 p-2 bg-white rounded shadow"
-               onClick={()=>{
-                  setPopupItem({...p, existente:true});
-                  setQuantidade(1); 
-                  setUnidade("UNIDADE");
-                  setNomeOutro(p.nome);
-               }}>
+          <div key={i} className="cursor-pointer flex items-center gap-2 p-2 bg-white rounded shadow" onClick={()=>{setPopupItem({...p}); setQuantidade(1); setUnidade("UNIDADE");}}>
             {p.imagem && <img src={p.imagem} alt={p.nome} className="w-10 h-10 sm:w-12 sm:h-12" />}
             {p.nome}
           </div>
@@ -244,7 +248,6 @@ function App() {
               onChange={e => setUnidade(e.target.value)}
             >
               <option>UNIDADE</option>
-              <option>CONJUNTO</option>
               <option>CAIXA</option>
               <option>PACOTE</option>
             </select>
@@ -277,14 +280,16 @@ function App() {
               <button
                 className="bg-pink-600 text-white px-4 py-2 rounded flex-1"
                 onClick={() => {
-                  if(popupItem.idx !== undefined){
+                  if (popupItem.idx !== undefined) {
                     editarItem(popupItem.idx, quantidade, unidade);
-                  } else {
+                  } else if (popupItem.outro) {
                     adicionarNaSacola({
                       ...popupItem,
-                      nome: popupItem.outro ? nomeOutro : popupItem.nome,
-                      imagem: popupItem.url || popupItem.imagem || ""
+                      nome: nomeOutro,
+                      imagem: popupItem.url || ""
                     }, quantidade, unidade);
+                  } else {
+                    adicionarNaSacola(popupItem, quantidade, unidade);
                   }
                   setPopupItem(null);
                 }}
