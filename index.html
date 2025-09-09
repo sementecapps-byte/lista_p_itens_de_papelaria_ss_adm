@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>LISTA DE ITENS DE PAPELARIA</title> <!-- título alterado -->
+<title>LISTA DE ITENS DE PAPELARIA</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
@@ -11,20 +11,28 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   body { overflow-x: hidden; }
-  .decor-icon { position:absolute;width:50px;height:50px;opacity:.2;pointer-events:none;z-index:0;transition:transform 2s;}
+  .decor-icon {
+    position: absolute;
+    width: 50px;
+    height: 50px;
+    opacity: 0.2;
+    pointer-events: none;
+    z-index: 0;
+    transition: transform 2s;
+  }
   .animated { animation: float 5s infinite ease-in-out; }
   @keyframes float {
-    0% {transform:rotate(0deg) translateY(0);}
-    50%{transform:rotate(5deg) translateY(-5px);}
-    100%{transform:rotate(0deg) translateY(0);}
+    0% { transform: rotate(0deg) translateY(0px);}
+    50% { transform: rotate(5deg) translateY(-5px);}
+    100% { transform: rotate(0deg) translateY(0px);}
   }
-  .line-divider { border-bottom:1px solid #d1d5db; margin:8px 0; }
+  .line-divider { border-bottom: 1px solid #d1d5db; margin: 8px 0; }
 </style>
 </head>
 <body class="bg-pink-50 min-h-screen relative">
 <div id="root" class="w-full max-w-3xl mx-auto relative z-10"></div>
 
-<!-- Ícones de papelaria decorativos -->
+<!-- Ícones decorativos -->
 <img src="https://cdn-icons-png.flaticon.com/512/5956/5956881.png" class="decor-icon animated" style="top:5%; left:5%"/>
 <img src="https://i.pinimg.com/736x/5b/1a/1f/5b1a1fe80409c15862ab918fc49e0854.jpg" class="decor-icon animated" style="top:15%; left:80%"/>
 <img src="https://cdn-icons-png.flaticon.com/512/5956/5956881.png" class="decor-icon animated" style="top:50%; left:10%"/>
@@ -51,7 +59,6 @@ function App() {
   const [nomeOutro, setNomeOutro] = useState("");
   const [previewAtivo, setPreviewAtivo] = useState(false);
 
-  // alerta ao sair com itens
   useEffect(()=>{
     const handleBeforeUnload = (e)=>{
       if(sacola.length>0){
@@ -70,59 +77,85 @@ function App() {
   function adicionarNaSacola(item, qtd, uni) {
     setSacola([...sacola, { ...item, quantidade: qtd, unidade: uni }]);
   }
+
   function editarItem(idx, qtd, uni) {
     const novaSacola = [...sacola];
     novaSacola[idx].quantidade = qtd;
     novaSacola[idx].unidade = uni;
     setSacola(novaSacola);
   }
+
   function excluirItem(idx) {
     setSacola(sacola.filter((_, i) => i !== idx));
   }
 
-  // gerar PDF só com URLs dos itens adicionados pelo botão "ADICIONAR OUTRO ITEM"
   async function gerarPDF() {
     const pdf = new jsPDF();
     pdf.setFontSize(16);
     pdf.text("Lista de Itens - Papelaria", 10, 15);
-    let y = 30;
 
-    for(const item of sacola){
+    let y = 30;
+    let itemCount = 0; // 3 por página
+    const imgWidth = 64;
+    const imgHeight = 64;
+
+    for (const item of sacola) {
+      if (itemCount === 3) {
+        pdf.addPage();
+        y = 30;
+        itemCount = 0;
+      }
+
       let dataURL = null;
-      if(item.imagem){
-        dataURL = await new Promise(resolve=>{
+      if (item.imagem) {
+        dataURL = await new Promise(resolve => {
           const img = new Image();
-          img.crossOrigin="Anonymous";
-          img.src=item.imagem;
+          img.crossOrigin = "Anonymous";
+          img.src = item.imagem;
           img.onload = () => {
             const canvas = document.createElement("canvas");
-            canvas.width = img.width*2; canvas.height=img.height*2;
+            canvas.width = img.width * 2;
+            canvas.height = img.height * 2;
             const ctx = canvas.getContext("2d");
-            ctx.drawImage(img,0,0,canvas.width,canvas.height);
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
             resolve(canvas.toDataURL("image/png"));
           };
-          img.onerror = ()=>resolve(null);
+          img.onerror = () => resolve(null);
         });
       }
-      if(dataURL) pdf.addImage(dataURL,"PNG",10,y,16,16);
+
+      if (dataURL) pdf.addImage(dataURL, "PNG", 10, y, imgWidth, imgHeight);
+
+      const textX = 10 + imgWidth + 10;
+      const textY = y + 15;
+      const textoItem = `${item.nome} - ${item.quantidade} ${item.unidade}`;
       pdf.setFontSize(12);
-      pdf.text(`${item.quantidade} ${item.unidade} - ${item.nome}`,30,y+12);
-      y+=24;
-      if(y>280){pdf.addPage(); y=20;}
+      const linhas = pdf.splitTextToSize(textoItem, 120);
+      pdf.text(linhas, textX, textY);
+
+      y += imgHeight + 15;
+      itemCount++;
     }
 
-    // só URLs dos itens "outro"
-    y+=10;
+    // nova página para URLs
+    pdf.addPage();
+    y = 20;
     pdf.setFontSize(14);
-    pdf.text("URLs (apenas itens adicionados manualmente)",10,y);
-    y+=10;
+    pdf.text("URLs dos Itens Adicionados Manualmente", 10, y);
+    y += 10;
     pdf.setFontSize(10);
-    for(const item of sacola.filter(i=>i.outro)){
-      const line=`${item.nome}: ${item.imagem||""}`;
-      pdf.text(line,10,y);
-      y+=6;
-      if(y>280){pdf.addPage(); y=20;}
+
+    for (const item of sacola.filter(i => i.outro)) {
+      const line = `{ nome: "${item.nome}", imagem: "${item.imagem || ""}"} `;
+      const linhasUrl = pdf.splitTextToSize(line, 180);
+      pdf.text(linhasUrl, 10, y);
+      y += 6 * linhasUrl.length;
+      if (y > 280) {
+        pdf.addPage();
+        y = 20;
+      }
     }
+
     return pdf;
   }
 
@@ -138,20 +171,22 @@ function App() {
     if(navigator.canShare && navigator.canShare({files:[file]})){
       try{
         await navigator.share({files:[file],title:"Lista de Itens",text:"Confira a lista de itens"});
-      }catch(e){ alert("Erro ao compartilhar: "+e); }
-    } else alert("Compartilhamento não suportado nesse dispositivo.");
+      }catch(e){
+        alert("Erro ao compartilhar: "+e);
+      }
+    } else {
+      alert("Compartilhamento não suportado nesse dispositivo.");
+    }
   }
 
   return (
     <div className="relative w-full px-2 sm:px-4 z-10">
       <h1 className="text-center font-bold text-2xl mb-4 text-pink-700">LISTA DE ITENS DE PAPELARIA</h1>
 
-      {/* campo de busca */}
       <div className="mb-4 flex justify-center">
         <input value={busca} onChange={e=>setBusca(e.target.value)} placeholder="Buscar item..." className="border rounded px-3 py-2 w-full max-w-xl" onFocus={()=>setBuscaAtiva(true)} onBlur={()=>setTimeout(()=>setBuscaAtiva(false),200)}/>
       </div>
 
-      {/* sugestões de itens */}
       <div className="mb-4 flex flex-col gap-1">
         {buscaAtiva && sugeridos.map((p,i)=>(
           <div key={i} className="cursor-pointer flex items-center gap-2 p-2 bg-white rounded shadow" onClick={()=>{setPopupItem({...p}); setQuantidade(1); setUnidade("UNIDADE");}}>
@@ -161,20 +196,18 @@ function App() {
         ))}
       </div>
 
-      {/* botões */}
       <div className="flex flex-col sm:flex-row gap-2 mb-6">
-        <button onClick={()=>{setPopupItem({outro:true,nome:"",imagem:"",url:""}); setQuantidade(1); setUnidade("UNIDADE"); setNomeOutro("");}} className="bg-pink-500 text-white px-4 py-2 rounded flex-1">ADICIONAR OUTRO ITEM</button>
+        <button onClick={()=>{setPopupItem({outro:true,nome:"",imagem:"",categoria:"OUTROS", url:""}); setQuantidade(1); setUnidade("UNIDADE"); setNomeOutro("");}} className="bg-pink-500 text-white px-4 py-2 rounded flex-1">ADICIONAR OUTRO ITEM</button>
         <button onClick={()=>setPreviewAtivo(true)} className="bg-pink-700 text-white px-4 py-2 rounded flex-1">CONFERIR E ENVIAR</button>
       </div>
 
-      {/* sacola */}
       <h2 className="mt-6 mb-2 font-bold text-lg text-pink-700">Minha Sacola</h2>
       <div className="flex flex-col gap-2">
         {sacola.map((i,idx)=>(
           <div key={idx} className="flex items-center gap-2 bg-white p-2 rounded shadow flex-wrap sm:flex-nowrap justify-between">
             <div className="flex items-center gap-2">
               {i.imagem && <img src={i.imagem} alt={i.nome} className="w-10 h-10 sm:w-12 sm:h-12"/>}
-              <span>{i.quantidade} {i.unidade} - {i.nome}</span>
+              <span>{i.nome} - {i.quantidade} {i.unidade}</span>
             </div>
             <div className="flex gap-2">
               <button className="bg-pink-500 text-white px-2 py-1 rounded" onClick={()=>{setPopupItem({...i,idx}); setQuantidade(i.quantidade); setUnidade(i.unidade); setNomeOutro(i.nome);}}>Editar</button>
@@ -184,7 +217,7 @@ function App() {
         ))}
       </div>
 
-      {/* Modal de adicionar/editar item */}
+      {/* Modal */}
       {popupItem && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50 p-2">
           <div className="bg-white p-4 sm:p-6 rounded shadow w-full max-w-xs sm:max-w-sm relative overflow-hidden">
@@ -195,35 +228,62 @@ function App() {
             )}
 
             {popupItem.outro && (
-              <input value={nomeOutro} onChange={e => setNomeOutro(e.target.value)} placeholder="Nome do item" className="border w-full p-2 mb-2" />
+              <input
+                value={nomeOutro}
+                onChange={e => setNomeOutro(e.target.value)}
+                placeholder="Nome do item"
+                className="border w-full p-2 mb-2"
+              />
             )}
 
-            <select className="border w-full p-2 mb-2" value={quantidade} onChange={e => setQuantidade(e.target.value)}>
+            <select
+              className="border w-full p-2 mb-2"
+              value={quantidade}
+              onChange={e => setQuantidade(e.target.value)}
+            >
               {Array.from({ length: 15 }, (_, i) => i + 1).map(n => (
                 <option key={n} value={n}>{n}</option>
               ))}
             </select>
 
-            <select className="border w-full p-2 mb-2" value={unidade} onChange={e => setUnidade(e.target.value)}>
+            <select
+              className="border w-full p-2 mb-2"
+              value={unidade}
+              onChange={e => setUnidade(e.target.value)}
+            >
               <option>UNIDADE</option>
               <option>CONJUNTO</option>
               <option>CAIXA</option>
               <option>PACOTE</option>
             </select>
 
-            {/* Campo URL apenas para "outro item" */}
             {popupItem.outro && (
               <>
-                <input value={popupItem.url || ""} onChange={e => setPopupItem({ ...popupItem, url: e.target.value })} placeholder="URL da imagem" className="border w-full p-2 mb-2"/>
-                <a href="https://www.google.com/imghp?hl=pt-PT&ogbl" target="_blank" className="text-blue-500 text-sm underline mb-2 block">
+                <input
+                  value={popupItem.url || ""}
+                  onChange={e => setPopupItem({ ...popupItem, url: e.target.value })}
+                  placeholder="URL da imagem"
+                  className="border w-full p-2 mb-2"
+                />
+                <a
+                  href="https://www.google.com/imghp?hl=pt-PT&ogbl"
+                  target="_blank"
+                  className="text-blue-500 text-sm underline mb-2 block"
+                >
                   Buscar imagem no Google Imagens
                 </a>
               </>
             )}
 
             <div className="flex flex-col sm:flex-row justify-between gap-2">
-              <button className="bg-gray-400 text-white px-4 py-2 rounded flex-1" onClick={() => setPopupItem(null)}>Cancelar</button>
-              <button className="bg-pink-600 text-white px-4 py-2 rounded flex-1"
+              <button
+                className="bg-gray-400 text-white px-4 py-2 rounded flex-1"
+                onClick={() => setPopupItem(null)}
+              >
+                Cancelar
+              </button>
+              <button
+                className="bg-pink-600 text-white px-4 py-2 rounded flex-1"
                 onClick={() => {
                   if (popupItem.idx !== undefined) {
                     editarItem(popupItem.idx, quantidade, unidade);
@@ -231,14 +291,14 @@ function App() {
                     adicionarNaSacola({
                       ...popupItem,
                       nome: nomeOutro,
-                      imagem: popupItem.url || "",
-                      outro:true
+                      imagem: popupItem.url || ""
                     }, quantidade, unidade);
                   } else {
                     adicionarNaSacola(popupItem, quantidade, unidade);
                   }
                   setPopupItem(null);
-                }}>
+                }}
+              >
                 {popupItem.idx !== undefined ? "Salvar" : "Adicionar à Sacola"}
               </button>
             </div>
@@ -259,10 +319,10 @@ function App() {
           </div>
 
           <div className="bg-white p-4 rounded shadow flex flex-col gap-2">
-            {sacola.map((i, idx) => (
-              <div key={idx} className="flex items-center gap-2 p-1">
+            {sacola.map((i,j)=> (
+              <div key={j} className="flex items-center gap-2 p-1">
                 {i.imagem && <img src={i.imagem} className="w-8 h-8"/>}
-                <span>{i.quantidade} {i.unidade} - {i.nome}</span>
+                <span>{i.nome} - {i.quantidade} {i.unidade}</span>
               </div>
             ))}
             {sacola.length === 0 && <p className="text-gray-500">Nenhum item na sacola.</p>}
