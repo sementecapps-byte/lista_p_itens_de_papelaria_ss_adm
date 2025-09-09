@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LISTA DE ITENS DE PAPELARIA</title> <!-- título alterado -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  body { overflow-x: hidden; }
+  .decor-icon { position:absolute;width:50px;height:50px;opacity:.2;pointer-events:none;z-index:0;transition:transform 2s;}
+  .animated { animation: float 5s infinite ease-in-out; }
+  @keyframes float {
+    0% {transform:rotate(0deg) translateY(0);}
+    50%{transform:rotate(5deg) translateY(-5px);}
+    100%{transform:rotate(0deg) translateY(0);}
+  }
+  .line-divider { border-bottom:1px solid #d1d5db; margin:8px 0; }
+</style>
+</head>
+<body class="bg-pink-50 min-h-screen relative">
+<div id="root" class="w-full max-w-3xl mx-auto relative z-10"></div>
+
+<!-- Ícones de papelaria decorativos -->
+<img src="https://cdn-icons-png.flaticon.com/512/5956/5956881.png" class="decor-icon animated" style="top:5%; left:5%"/>
+<img src="https://i.pinimg.com/736x/5b/1a/1f/5b1a1fe80409c15862ab918fc49e0854.jpg" class="decor-icon animated" style="top:15%; left:80%"/>
+<img src="https://cdn-icons-png.flaticon.com/512/5956/5956881.png" class="decor-icon animated" style="top:50%; left:10%"/>
+<img src="https://www.tudodesenhos.com/uploads/images/1784/tesoura-sem-pontas.jpg" class="decor-icon animated" style="top:30%; left:50%"/>
+<img src="https://i.pinimg.com/736x/5b/1a/1f/5b1a1fe80409c15862ab918fc49e0854.jpg" class="decor-icon animated" style="top:60%; left:75%"/>
+<img src="https://cdn-icons-png.flaticon.com/512/5956/5956881.png" class="decor-icon animated" style="top:40%; left:80%"/>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+const { jsPDF } = window.jspdf;
+
+const produtosIniciais = [
+  { nome: "Caneta Azul", imagem: "data:image/png;base64,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" },
+  { nome: "Borracha", imagem: "https://a-static.mlcdn.com.br/1500x1500/borracha-escolar-faber-castell-tk-plastica/lojamicrotec/2765p/845812bfe5cae1cc948b2f1b7c4681f1.jpeg" }
+];
+
+function App() {
+  const [busca, setBusca] = useState("");
+  const [buscaAtiva, setBuscaAtiva] = useState(false);
+  const [sacola, setSacola] = useState([]);
+  const [popupItem, setPopupItem] = useState(null);
+  const [quantidade, setQuantidade] = useState(1);
+  const [unidade, setUnidade] = useState("UNIDADE");
+  const [nomeOutro, setNomeOutro] = useState("");
+  const [previewAtivo, setPreviewAtivo] = useState(false);
+
+  // alerta ao sair com itens
+  useEffect(()=>{
+    const handleBeforeUnload = (e)=>{
+      if(sacola.length>0){
+        e.preventDefault();
+        e.returnValue="Tem certeza que deseja sair? Suas alterações serão perdidas.";
+      }
+    };
+    window.addEventListener("beforeunload",handleBeforeUnload);
+    return ()=>window.removeEventListener("beforeunload",handleBeforeUnload);
+  },[sacola]);
+
+  const sugeridos = produtosIniciais.filter(p =>
+    p.nome.toLowerCase().includes(busca.toLowerCase())
+  );
+
+  function adicionarNaSacola(item, qtd, uni) {
+    setSacola([...sacola, { ...item, quantidade: qtd, unidade: uni }]);
+  }
+  function editarItem(idx, qtd, uni) {
+    const novaSacola = [...sacola];
+    novaSacola[idx].quantidade = qtd;
+    novaSacola[idx].unidade = uni;
+    setSacola(novaSacola);
+  }
+  function excluirItem(idx) {
+    setSacola(sacola.filter((_, i) => i !== idx));
+  }
+
+  // gerar PDF só com URLs dos itens adicionados pelo botão "ADICIONAR OUTRO ITEM"
+  async function gerarPDF() {
+    const pdf = new jsPDF();
+    pdf.setFontSize(16);
+    pdf.text("Lista de Itens - Papelaria", 10, 15);
+    let y = 30;
+
+    for(const item of sacola){
+      let dataURL = null;
+      if(item.imagem){
+        dataURL = await new Promise(resolve=>{
+          const img = new Image();
+          img.crossOrigin="Anonymous";
+          img.src=item.imagem;
+          img.onload = () => {
+            const canvas = document.createElement("canvas");
+            canvas.width = img.width*2; canvas.height=img.height*2;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img,0,0,canvas.width,canvas.height);
+            resolve(canvas.toDataURL("image/png"));
+          };
+          img.onerror = ()=>resolve(null);
+        });
+      }
+      if(dataURL) pdf.addImage(dataURL,"PNG",10,y,16,16);
+      pdf.setFontSize(12);
+      pdf.text(`${item.quantidade} ${item.unidade} - ${item.nome}`,30,y+12);
+      y+=24;
+      if(y>280){pdf.addPage(); y=20;}
+    }
+
+    // só URLs dos itens "outro"
+    y+=10;
+    pdf.setFontSize(14);
+    pdf.text("URLs (apenas itens adicionados manualmente)",10,y);
+    y+=10;
+    pdf.setFontSize(10);
+    for(const item of sacola.filter(i=>i.outro)){
+      const line=`${item.nome}: ${item.imagem||""}`;
+      pdf.text(line,10,y);
+      y+=6;
+      if(y>280){pdf.addPage(); y=20;}
+    }
+    return pdf;
+  }
+
+  async function baixarPDF() {
+    const pdf = await gerarPDF();
+    pdf.save("ListaDeItens.pdf");
+  }
+
+  async function compartilharPDF() {
+    const pdf = await gerarPDF();
+    const blob = pdf.output("blob");
+    const file = new File([blob],"ListaDeItens.pdf",{type:"application/pdf"});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      try{
+        await navigator.share({files:[file],title:"Lista de Itens",text:"Confira a lista de itens"});
+      }catch(e){ alert("Erro ao compartilhar: "+e); }
+    } else alert("Compartilhamento não suportado nesse dispositivo.");
+  }
+
+  return (
+    <div className="relative w-full px-2 sm:px-4 z-10">
+      <h1 className="text-center font-bold text-2xl mb-4 text-pink-700">LISTA DE ITENS DE PAPELARIA</h1>
+
+      {/* campo de busca */}
+      <div className="mb-4 flex justify-center">
+        <input value={busca} onChange={e=>setBusca(e.target.value)} placeholder="Buscar item..." className="border rounded px-3 py-2 w-full max-w-xl" onFocus={()=>setBuscaAtiva(true)} onBlur={()=>setTimeout(()=>setBuscaAtiva(false),200)}/>
+      </div>
+
+      {/* sugestões de itens */}
+      <div className="mb-4 flex flex-col gap-1">
+        {buscaAtiva && sugeridos.map((p,i)=>(
+          <div key={i} className="cursor-pointer flex items-center gap-2 p-2 bg-white rounded shadow" onClick={()=>{setPopupItem({...p}); setQuantidade(1); setUnidade("UNIDADE");}}>
+            {p.imagem && <img src={p.imagem} alt={p.nome} className="w-10 h-10 sm:w-12 sm:h-12" />}
+            {p.nome}
+          </div>
+        ))}
+      </div>
+
+      {/* botões */}
+      <div className="flex flex-col sm:flex-row gap-2 mb-6">
+        <button onClick={()=>{setPopupItem({outro:true,nome:"",imagem:"",url:""}); setQuantidade(1); setUnidade("UNIDADE"); setNomeOutro("");}} className="bg-pink-500 text-white px-4 py-2 rounded flex-1">ADICIONAR OUTRO ITEM</button>
+        <button onClick={()=>setPreviewAtivo(true)} className="bg-pink-700 text-white px-4 py-2 rounded flex-1">CONFERIR E ENVIAR</button>
+      </div>
+
+      {/* sacola */}
+      <h2 className="mt-6 mb-2 font-bold text-lg text-pink-700">Minha Sacola</h2>
+      <div className="flex flex-col gap-2">
+        {sacola.map((i,idx)=>(
+          <div key={idx} className="flex items-center gap-2 bg-white p-2 rounded shadow flex-wrap sm:flex-nowrap justify-between">
+            <div className="flex items-center gap-2">
+              {i.imagem && <img src={i.imagem} alt={i.nome} className="w-10 h-10 sm:w-12 sm:h-12"/>}
+              <span>{i.quantidade} {i.unidade} - {i.nome}</span>
+            </div>
+            <div className="flex gap-2">
+              <button className="bg-pink-500 text-white px-2 py-1 rounded" onClick={()=>{setPopupItem({...i,idx}); setQuantidade(i.quantidade); setUnidade(i.unidade); setNomeOutro(i.nome);}}>Editar</button>
+              <button className="bg-gray-400 text-white px-2 py-1 rounded" onClick={()=>excluirItem(idx)}>Excluir</button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Modal de adicionar/editar item */}
+      {popupItem && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50 p-2">
+          <div className="bg-white p-4 sm:p-6 rounded shadow w-full max-w-xs sm:max-w-sm relative overflow-hidden">
+            <h3 className="font-bold mb-2">{popupItem.outro ? "Adicionar Item" : popupItem.nome}</h3>
+
+            {!popupItem.outro && popupItem.imagem && (
+              <img src={popupItem.imagem} alt={popupItem.nome} className="w-16 h-16 mx-auto mb-2"/>
+            )}
+
+            {popupItem.outro && (
+              <input value={nomeOutro} onChange={e => setNomeOutro(e.target.value)} placeholder="Nome do item" className="border w-full p-2 mb-2" />
+            )}
+
+            <select className="border w-full p-2 mb-2" value={quantidade} onChange={e => setQuantidade(e.target.value)}>
+              {Array.from({ length: 15 }, (_, i) => i + 1).map(n => (
+                <option key={n} value={n}>{n}</option>
+              ))}
+            </select>
+
+            <select className="border w-full p-2 mb-2" value={unidade} onChange={e => setUnidade(e.target.value)}>
+              <option>UNIDADE</option>
+              <option>CONJUNTO</option>
+              <option>CAIXA</option>
+              <option>PACOTE</option>
+            </select>
+
+            {/* Campo URL apenas para "outro item" */}
+            {popupItem.outro && (
+              <>
+                <input value={popupItem.url || ""} onChange={e => setPopupItem({ ...popupItem, url: e.target.value })} placeholder="URL da imagem" className="border w-full p-2 mb-2"/>
+                <a href="https://www.google.com/imghp?hl=pt-PT&ogbl" target="_blank" className="text-blue-500 text-sm underline mb-2 block">
+                  Buscar imagem no Google Imagens
+                </a>
+              </>
+            )}
+
+            <div className="flex flex-col sm:flex-row justify-between gap-2">
+              <button className="bg-gray-400 text-white px-4 py-2 rounded flex-1" onClick={() => setPopupItem(null)}>Cancelar</button>
+              <button className="bg-pink-600 text-white px-4 py-2 rounded flex-1"
+                onClick={() => {
+                  if (popupItem.idx !== undefined) {
+                    editarItem(popupItem.idx, quantidade, unidade);
+                  } else if (popupItem.outro) {
+                    adicionarNaSacola({
+                      ...popupItem,
+                      nome: nomeOutro,
+                      imagem: popupItem.url || "",
+                      outro:true
+                    }, quantidade, unidade);
+                  } else {
+                    adicionarNaSacola(popupItem, quantidade, unidade);
+                  }
+                  setPopupItem(null);
+                }}>
+                {popupItem.idx !== undefined ? "Salvar" : "Adicionar à Sacola"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pré-visualização */}
+      {previewAtivo && (
+        <div className="fixed inset-0 bg-pink-50 z-50 p-4 overflow-auto">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-pink-700 font-bold text-xl">Pré-visualização da Lista</h2>
+            <div className="flex gap-2">
+              <button onClick={baixarPDF} className="bg-pink-600 text-white px-4 py-2 rounded">Baixar PDF</button>
+              <button onClick={compartilharPDF} className="bg-pink-500 text-white px-4 py-2 rounded">Compartilhar</button>
+              <button onClick={() => setPreviewAtivo(false)} className="bg-gray-400 text-white px-4 py-2 rounded">Fechar</button>
+            </div>
+          </div>
+
+          <div className="bg-white p-4 rounded shadow flex flex-col gap-2">
+            {sacola.map((i, idx) => (
+              <div key={idx} className="flex items-center gap-2 p-1">
+                {i.imagem && <img src={i.imagem} className="w-8 h-8"/>}
+                <span>{i.quantidade} {i.unidade} - {i.nome}</span>
+              </div>
+            ))}
+            {sacola.length === 0 && <p className="text-gray-500">Nenhum item na sacola.</p>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
