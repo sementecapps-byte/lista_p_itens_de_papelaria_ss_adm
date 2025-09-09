@@ -26,19 +26,10 @@
     50% { transform: rotate(5deg) translateY(-5px);}
     100% { transform: rotate(0deg) translateY(0px);}
   }
-  .line-divider { border-bottom: 1px solid #d1d5db; margin: 8px 0; }
 </style>
 </head>
 <body class="bg-pink-50 min-h-screen relative">
 <div id="root" class="w-full max-w-3xl mx-auto relative z-10"></div>
-
-<!-- Ícones decorativos -->
-<img src="https://cdn-icons-png.flaticon.com/512/5956/5956881.png" class="decor-icon animated" style="top:5%; left:5%"/>
-<img src="https://i.pinimg.com/736x/5b/1a/1f/5b1a1fe80409c15862ab918fc49e0854.jpg" class="decor-icon animated" style="top:15%; left:80%"/>
-<img src="https://cdn-icons-png.flaticon.com/512/5956/5956881.png" class="decor-icon animated" style="top:50%; left:10%"/>
-<img src="https://www.tudodesenhos.com/uploads/images/1784/tesoura-sem-pontas.jpg" class="decor-icon animated" style="top:30%; left:50%"/>
-<img src="https://i.pinimg.com/736x/5b/1a/1f/5b1a1fe80409c15862ab918fc49e0854.jpg" class="decor-icon animated" style="top:60%; left:75%"/>
-<img src="https://cdn-icons-png.flaticon.com/512/5956/5956881.png" class="decor-icon animated" style="top:40%; left:80%"/>
 
 <script type="text/babel">
 const { useState, useEffect } = React;
@@ -88,67 +79,78 @@ function App() {
     setSacola(sacola.filter((_, i) => i !== idx));
   }
 
+  // Converte qualquer URL de imagem para base64
+  async function urlParaBase64(url) {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      return await new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsDataURL(blob);
+      });
+    } catch (e) {
+      console.warn("Não foi possível carregar a imagem:", url);
+      return null;
+    }
+  }
+
   async function gerarPDF() {
     const pdf = new jsPDF();
     pdf.setFontSize(16);
     pdf.text("Lista de Itens - Papelaria", 10, 15);
 
     let y = 30;
-    let itemCount = 0;
+    const pageHeight = pdf.internal.pageSize.height;
     const imgWidth = 64;
     const imgHeight = 64;
+    const gap = 1;
 
     for (const item of sacola) {
-      if (itemCount === 3) {
-        pdf.addPage();
-        y = 30;
-        itemCount = 0;
-      }
-
       let dataURL = null;
       if (item.imagem) {
-        try {
-          const response = await fetch(item.imagem);
-          const blob = await response.blob();
-          const reader = new FileReader();
-          dataURL = await new Promise(resolve => {
-            reader.onloadend = () => resolve(reader.result);
-            reader.readAsDataURL(blob);
-          });
-        } catch(e) {
-          console.warn("Não foi possível carregar a imagem:", item.imagem);
-          dataURL = null;
-        }
+        dataURL = await urlParaBase64(item.imagem);
+      }
+
+      // calcula altura do item
+      let itemHeight = 0;
+      if (dataURL) itemHeight += imgHeight + 5;
+      const textoItem = `${item.nome} - ${item.quantidade} ${item.unidade}`;
+      pdf.setFontSize(12);
+      const linhas = pdf.splitTextToSize(textoItem, 120);
+      itemHeight += linhas.length * 6;
+      itemHeight += gap;
+
+      if (y + itemHeight > pageHeight - 20) {
+        pdf.addPage();
+        y = 30;
       }
 
       if (dataURL) pdf.addImage(dataURL, "PNG", 10, y, imgWidth, imgHeight);
 
-      const textX = 10 + imgWidth + 10;
-      const textY = y + 15;
-      const textoItem = `${item.nome} - ${item.quantidade} ${item.unidade}`;
-      pdf.setFontSize(12);
-      const linhas = pdf.splitTextToSize(textoItem, 120);
+      const textX = 10 + (dataURL ? imgWidth + 10 : 0);
+      const textY = y + (dataURL ? 15 : 0);
       pdf.text(linhas, textX, textY);
 
-      y += imgHeight + 15;
-      itemCount++;
+      y += itemHeight;
     }
 
+    // URLs dos itens adicionados manualmente
     pdf.addPage();
-    y = 20;
+    let yUrl = 20;
     pdf.setFontSize(14);
-    pdf.text("URLs dos Itens Adicionados Manualmente", 10, y);
-    y += 10;
+    pdf.text("URLs dos Itens Adicionados Manualmente", 10, yUrl);
+    yUrl += 10;
     pdf.setFontSize(10);
 
     for (const item of sacola.filter(i => i.outro)) {
       const line = `{ nome: "${item.nome}", imagem: "${item.imagem || ""}"} `;
       const linhasUrl = pdf.splitTextToSize(line, 180);
-      pdf.text(linhasUrl, 10, y);
-      y += 6 * linhasUrl.length;
-      if (y > 280) {
+      pdf.text(linhasUrl, 10, yUrl);
+      yUrl += 6 * linhasUrl.length;
+      if (yUrl > pageHeight - 20) {
         pdf.addPage();
-        y = 20;
+        yUrl = 20;
       }
     }
 
@@ -237,7 +239,7 @@ function App() {
               value={quantidade}
               onChange={e => setQuantidade(e.target.value)}
             >
-              {Array.from({ length: 100 }, (_, i) => i + 1).map(n => (
+              {Array.from({ length: 50 }, (_, i) => i + 1).map(n => (
                 <option key={n} value={n}>{n}</option>
               ))}
             </select>
@@ -248,26 +250,18 @@ function App() {
               onChange={e => setUnidade(e.target.value)}
             >
               <option>UNIDADE</option>
+              <option>CONJUNTO</option>
               <option>CAIXA</option>
               <option>PACOTE</option>
             </select>
 
             {popupItem.outro && (
-              <>
-                <input
-                  value={popupItem.url || ""}
-                  onChange={e => setPopupItem({ ...popupItem, url: e.target.value })}
-                  placeholder="URL da imagem"
-                  className="border w-full p-2 mb-2"
-                />
-                <a
-                  href="https://www.google.com/imghp?hl=pt-PT&ogbl"
-                  target="_blank"
-                  className="text-blue-500 text-sm underline mb-2 block"
-                >
-                  Buscar imagem no Google Imagens
-                </a>
-              </>
+              <input
+                value={popupItem.url || ""}
+                onChange={e => setPopupItem({ ...popupItem, url: e.target.value })}
+                placeholder="URL da imagem"
+                className="border w-full p-2 mb-2"
+              />
             )}
 
             <div className="flex flex-col sm:flex-row justify-between gap-2">
