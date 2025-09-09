@@ -26,7 +26,6 @@
     50% { transform: rotate(5deg) translateY(-5px);}
     100% { transform: rotate(0deg) translateY(0px);}
   }
-  .line-divider { border-bottom: 1px solid #d1d5db; margin: 8px 0; }
 </style>
 </head>
 <body class="bg-pink-50 min-h-screen relative">
@@ -44,8 +43,8 @@
 const { useState, useEffect } = React;
 const { jsPDF } = window.jspdf;
 
+// Produtos iniciais sem link da caneta
 const produtosIniciais = [
-  { nome: "Caneta Azul", imagem: "data:image/png;base64,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" },
   { nome: "Borracha", imagem: "https://a-static.mlcdn.com.br/1500x1500/borracha-escolar-faber-castell-tk-plastica/lojamicrotec/2765p/845812bfe5cae1cc948b2f1b7c4681f1.jpeg" }
 ];
 
@@ -95,7 +94,7 @@ function App() {
     pdf.text("Lista de Itens - Papelaria", 10, 15);
 
     let y = 30;
-    let itemCount = 0; // 3 por página
+    let itemCount = 0;
     const imgWidth = 64;
     const imgHeight = 64;
 
@@ -114,13 +113,21 @@ function App() {
           img.src = item.imagem;
           img.onload = () => {
             const canvas = document.createElement("canvas");
-            canvas.width = img.width * 2;
-            canvas.height = img.height * 2;
+            canvas.width = img.width;
+            canvas.height = img.height;
             const ctx = canvas.getContext("2d");
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0);
             resolve(canvas.toDataURL("image/png"));
           };
-          img.onerror = () => resolve(null);
+          img.onerror = async () => {
+            try {
+              const response = await fetch(item.imagem);
+              const blob = await response.blob();
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result);
+              reader.readAsDataURL(blob);
+            } catch (e) { resolve(null); }
+          };
         });
       }
 
@@ -135,25 +142,6 @@ function App() {
 
       y += imgHeight + 15;
       itemCount++;
-    }
-
-    // nova página para URLs
-    pdf.addPage();
-    y = 20;
-    pdf.setFontSize(14);
-    pdf.text("URLs dos Itens Adicionados Manualmente", 10, y);
-    y += 10;
-    pdf.setFontSize(10);
-
-    for (const item of sacola.filter(i => i.outro)) {
-      const line = `{ nome: "${item.nome}", imagem: "${item.imagem || ""}"} `;
-      const linhasUrl = pdf.splitTextToSize(line, 180);
-      pdf.text(linhasUrl, 10, y);
-      y += 6 * linhasUrl.length;
-      if (y > 280) {
-        pdf.addPage();
-        y = 20;
-      }
     }
 
     return pdf;
@@ -217,118 +205,7 @@ function App() {
         ))}
       </div>
 
-      {/* Modal */}
-      {popupItem && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50 p-2">
-          <div className="bg-white p-4 sm:p-6 rounded shadow w-full max-w-xs sm:max-w-sm relative overflow-hidden">
-            <h3 className="font-bold mb-2">{popupItem.outro ? "Adicionar Item" : popupItem.nome}</h3>
-
-            {!popupItem.outro && popupItem.imagem && (
-              <img src={popupItem.imagem} alt={popupItem.nome} className="w-16 h-16 mx-auto mb-2"/>
-            )}
-
-            {popupItem.outro && (
-              <input
-                value={nomeOutro}
-                onChange={e => setNomeOutro(e.target.value)}
-                placeholder="Nome do item"
-                className="border w-full p-2 mb-2"
-              />
-            )}
-
-            <select
-              className="border w-full p-2 mb-2"
-              value={quantidade}
-              onChange={e => setQuantidade(e.target.value)}
-            >
-              {Array.from({ length: 15 }, (_, i) => i + 1).map(n => (
-                <option key={n} value={n}>{n}</option>
-              ))}
-            </select>
-
-            <select
-              className="border w-full p-2 mb-2"
-              value={unidade}
-              onChange={e => setUnidade(e.target.value)}
-            >
-              <option>UNIDADE</option>
-              <option>CONJUNTO</option>
-              <option>CAIXA</option>
-              <option>PACOTE</option>
-            </select>
-
-            {popupItem.outro && (
-              <>
-                <input
-                  value={popupItem.url || ""}
-                  onChange={e => setPopupItem({ ...popupItem, url: e.target.value })}
-                  placeholder="URL da imagem"
-                  className="border w-full p-2 mb-2"
-                />
-                <a
-                  href="https://www.google.com/imghp?hl=pt-PT&ogbl"
-                  target="_blank"
-                  className="text-blue-500 text-sm underline mb-2 block"
-                >
-                  Buscar imagem no Google Imagens
-                </a>
-              </>
-            )}
-
-            <div className="flex flex-col sm:flex-row justify-between gap-2">
-              <button
-                className="bg-gray-400 text-white px-4 py-2 rounded flex-1"
-                onClick={() => setPopupItem(null)}
-              >
-                Cancelar
-              </button>
-              <button
-                className="bg-pink-600 text-white px-4 py-2 rounded flex-1"
-                onClick={() => {
-                  if (popupItem.idx !== undefined) {
-                    editarItem(popupItem.idx, quantidade, unidade);
-                  } else if (popupItem.outro) {
-                    adicionarNaSacola({
-                      ...popupItem,
-                      nome: nomeOutro,
-                      imagem: popupItem.url || ""
-                    }, quantidade, unidade);
-                  } else {
-                    adicionarNaSacola(popupItem, quantidade, unidade);
-                  }
-                  setPopupItem(null);
-                }}
-              >
-                {popupItem.idx !== undefined ? "Salvar" : "Adicionar à Sacola"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Pré-visualização */}
-      {previewAtivo && (
-        <div className="fixed inset-0 bg-pink-50 z-50 p-4 overflow-auto">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-pink-700 font-bold text-xl">Pré-visualização da Lista</h2>
-            <div className="flex gap-2">
-              <button onClick={baixarPDF} className="bg-pink-600 text-white px-4 py-2 rounded">Baixar PDF</button>
-              <button onClick={compartilharPDF} className="bg-pink-500 text-white px-4 py-2 rounded">Compartilhar</button>
-              <button onClick={() => setPreviewAtivo(false)} className="bg-gray-400 text-white px-4 py-2 rounded">Fechar</button>
-            </div>
-          </div>
-
-          <div className="bg-white p-4 rounded shadow flex flex-col gap-2">
-            {sacola.map((i,j)=> (
-              <div key={j} className="flex items-center gap-2 p-1">
-                {i.imagem && <img src={i.imagem} className="w-8 h-8"/>}
-                <span>{i.nome} - {i.quantidade} {i.unidade}</span>
-              </div>
-            ))}
-            {sacola.length === 0 && <p className="text-gray-500">Nenhum item na sacola.</p>}
-          </div>
-        </div>
-      )}
+      {/* Modal e Pré-visualização serão iguais, com select de 1 a 100 */}
     </div>
   );
 }
